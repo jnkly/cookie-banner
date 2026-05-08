@@ -1,0 +1,313 @@
+<!-- Jadu Cookie Consent Proof of Concept -->
+<style>
+  .jc-cookie-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1f1f1f;
+    color: #ffffff;
+    padding: 16px;
+    z-index: 99999;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.2);
+  }
+
+  .jc-cookie-banner__inner {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .jc-cookie-banner h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+  }
+
+  .jc-cookie-banner p {
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+
+  .jc-cookie-banner__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .jc-cookie-banner button {
+    border: 0;
+    padding: 12px 16px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 4px;
+  }
+
+  .jc-cookie-banner__accept {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .jc-cookie-banner__reject {
+    background: transparent;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+  }
+
+  .jc-cookie-banner__settings {
+    display: inline-block;
+    margin-top: 12px;
+    color: #ffffff;
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 14px;
+  }
+
+  .jc-cookie-banner[hidden] {
+    display: none;
+  }
+</style>
+
+<div id="jc-cookie-banner" class="jc-cookie-banner" hidden role="region" aria-label="Cookie consent banner">
+  <div class="jc-cookie-banner__inner">
+    <h2>Cookies on this website</h2>
+
+    <p>We use some essential cookies to make this website work. We'd also like to use analytics cookies and similar technologies to understand how you use the website so we can improve services.</p>
+
+    <div class="jc-cookie-banner__actions">
+      <button type="button" id="jc-cookie-accept" class="jc-cookie-banner__accept">Accept analytics cookies</button>
+
+      <button type="button" id="jc-cookie-reject" class="jc-cookie-banner__reject">Reject analytics cookies</button>
+    </div>
+
+    <button type="button" id="jc-cookie-settings" class="jc-cookie-banner__settings">Change cookie settings</button>
+  </div>
+</div>
+
+<script>
+  (function () {
+
+    var STORAGE_KEY = 'jcCookieConsent';
+
+    /*
+      ============================================================
+      CONFIG
+      ============================================================
+    */
+
+    var config = {
+
+      /*
+        Replace with your real GA4 measurement ID
+      */
+      googleAnalyticsId: 'G-NHDSE3NWYM',
+
+      /*
+        Placeholder hook for future Cludo analytics enablement
+      */
+      enableCludoAnalytics: function () {
+        console.log('Cludo analytics enabled');
+      }
+    };
+
+    /*
+      ============================================================
+      HELPERS
+      ============================================================
+    */
+
+    function getConsent() {
+
+      try {
+        return JSON.parse(
+          localStorage.getItem(STORAGE_KEY)
+        );
+
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function setConsent(analyticsEnabled) {
+
+      var consent = {
+        analytics: analyticsEnabled,
+        date: new Date().toISOString()
+      };
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(consent)
+      );
+    }
+
+    /*
+      ============================================================
+      GOOGLE ANALYTICS LOADER
+      ============================================================
+    */
+
+    function loadGoogleAnalytics() {
+
+      if (
+        !config.googleAnalyticsId ||
+        config.googleAnalyticsId === 'G-NHDSE3NWYM'
+      ) {
+
+        console.warn(
+          'Cookie banner: Replace G-NHDSE3NWYM with your GA4 ID.'
+        );
+
+        return;
+      }
+
+      /*
+        Prevent duplicate loading
+      */
+      if (window.jcAnalyticsLoaded) {
+        return;
+      }
+
+      window.jcAnalyticsLoaded = true;
+
+      window.dataLayer = window.dataLayer || [];
+
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+
+      window.gtag = gtag;
+
+      gtag('js', new Date());
+
+      gtag('config', config.googleAnalyticsId);
+
+      var script = document.createElement('script');
+
+      script.async = true;
+
+      script.src =
+        'https://www.googletagmanager.com/gtag/js?id=' +
+        encodeURIComponent(config.googleAnalyticsId);
+
+      document.head.appendChild(script);
+
+      console.log('Google Analytics loaded');
+    }
+
+    /*
+      ============================================================
+      ENABLE ANALYTICS
+      ============================================================
+    */
+
+    function enableAnalytics() {
+
+      loadGoogleAnalytics();
+
+      if (
+        typeof config.enableCludoAnalytics === 'function'
+      ) {
+
+        config.enableCludoAnalytics();
+      }
+    }
+
+    /*
+      ============================================================
+      UI
+      ============================================================
+    */
+
+    var banner =
+      document.getElementById('jc-cookie-banner');
+
+    var acceptButton =
+      document.getElementById('jc-cookie-accept');
+
+    var rejectButton =
+      document.getElementById('jc-cookie-reject');
+
+    var settingsButton =
+      document.getElementById('jc-cookie-settings');
+
+    function showBanner() {
+      banner.hidden = false;
+    }
+
+    function hideBanner() {
+      banner.hidden = true;
+    }
+
+    /*
+      ============================================================
+      INITIALISE
+      ============================================================
+    */
+
+    var existingConsent = getConsent();
+
+    if (!existingConsent) {
+
+      showBanner();
+
+      /*
+        Hide settings button when banner already visible
+      */
+      settingsButton.style.display = 'none';
+
+    } else if (
+      existingConsent.analytics === true
+    ) {
+
+      enableAnalytics();
+
+      hideBanner();
+
+    } else {
+
+      hideBanner();
+    }
+
+    /*
+      ============================================================
+      EVENTS
+      ============================================================
+    */
+
+    acceptButton.addEventListener(
+      'click',
+      function () {
+
+        setConsent(true);
+
+        enableAnalytics();
+
+        hideBanner();
+      }
+    );
+
+    rejectButton.addEventListener(
+      'click',
+      function () {
+
+        setConsent(false);
+
+        hideBanner();
+      }
+    );
+
+    settingsButton.addEventListener(
+      'click',
+      function () {
+
+        localStorage.removeItem(STORAGE_KEY);
+
+        window.location.reload();
+      }
+    );
+
+  })();
+</script>
