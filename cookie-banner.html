@@ -45,12 +45,13 @@
   .jc-cookie-banner__accept {
     background: #ffffff;
     color: #000000;
+    font-weight: bold;
   }
 
   .jc-cookie-banner__reject {
-    background: transparent;
-    color: #ffffff;
-    border: 1px solid #ffffff;
+    background: #ffffff;
+    color: #000000;
+    font-weight: bold;
   }
 
   .jc-cookie-banner__settings {
@@ -68,7 +69,28 @@
   .jc-cookie-banner[hidden] {
     display: none;
   }
+
+  .jc-cookie-manage-trigger {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 99998;
+    background: #1f1f1f;
+    color: #ffffff;
+    border: 1px solid #ffffff;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+  }
+
+  .jc-cookie-manage-trigger[hidden] {
+    display: none;
+  }
 </style>
+
+<button type="button" id="jc-cookie-manage" class="jc-cookie-manage-trigger" hidden>Manage Cookies</button>
 
 <div id="jc-cookie-banner" class="jc-cookie-banner" hidden role="region" aria-label="Cookie consent banner">
   <div class="jc-cookie-banner__inner">
@@ -88,6 +110,24 @@
 
 <script>
   (function () {
+
+    /*
+      Ensure banner and trigger are in the body, even if snippet is in the head
+    */
+    document.addEventListener('DOMContentLoaded', function() {
+      var b = document.getElementById('jc-cookie-banner');
+      var m = document.getElementById('jc-cookie-manage');
+      if (b && b.parentElement !== document.body) {
+        document.body.appendChild(b);
+      }
+      if (m && m.parentElement !== document.body) {
+        document.body.appendChild(m);
+      }
+    });
+
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    window.gtag = gtag;
 
     var STORAGE_KEY = 'jcCookieConsent';
 
@@ -172,14 +212,6 @@
 
       window.jcAnalyticsLoaded = true;
 
-      window.dataLayer = window.dataLayer || [];
-
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-
-      window.gtag = gtag;
-
       gtag('js', new Date());
 
       gtag('config', config.googleAnalyticsId);
@@ -233,12 +265,17 @@
     var settingsButton =
       document.getElementById('jc-cookie-settings');
 
+    var manageButton =
+      document.getElementById('jc-cookie-manage');
+
     function showBanner() {
       banner.hidden = false;
+      manageButton.hidden = true;
     }
 
     function hideBanner() {
       banner.hidden = true;
+      manageButton.hidden = false;
     }
 
     /*
@@ -247,7 +284,26 @@
       ============================================================
     */
 
+    /*
+      GCM v2 - Initial consent check
+    */
     var existingConsent = getConsent();
+
+    if (existingConsent && existingConsent.analytics === true) {
+      gtag('consent', 'default', {
+        'analytics_storage': 'granted',
+        'ad_storage': 'granted',
+        'ad_user_data': 'granted',
+        'ad_personalization': 'granted'
+      });
+    } else {
+      gtag('consent', 'default', {
+        'analytics_storage': 'denied',
+        'ad_storage': 'denied',
+        'ad_user_data': 'denied',
+        'ad_personalization': 'denied'
+      });
+    }
 
     if (!existingConsent) {
 
@@ -283,6 +339,13 @@
 
         setConsent(true);
 
+        gtag('consent', 'update', {
+          'analytics_storage': 'granted',
+          'ad_storage': 'granted',
+          'ad_user_data': 'granted',
+          'ad_personalization': 'granted'
+        });
+
         enableAnalytics();
 
         hideBanner();
@@ -295,6 +358,13 @@
 
         setConsent(false);
 
+        gtag('consent', 'update', {
+          'analytics_storage': 'denied',
+          'ad_storage': 'denied',
+          'ad_user_data': 'denied',
+          'ad_personalization': 'denied'
+        });
+
         hideBanner();
       }
     );
@@ -306,6 +376,13 @@
         localStorage.removeItem(STORAGE_KEY);
 
         window.location.reload();
+      }
+    );
+
+    manageButton.addEventListener(
+      'click',
+      function () {
+        showBanner();
       }
     );
 
